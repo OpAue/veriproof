@@ -30,7 +30,10 @@ public enum ErrorCode {
     INVALID_FILE(HttpStatus.BAD_REQUEST, "INVALID_FILE", "유효하지 않은 파일입니다."),
     FILE_TOO_LARGE(HttpStatus.BAD_REQUEST, "FILE_TOO_LARGE", "파일 크기가 허용 범위를 초과합니다."),
     UNSUPPORTED_FILE_TYPE(HttpStatus.BAD_REQUEST, "UNSUPPORTED_FILE_TYPE", "지원하지 않는 파일 형식입니다."),
-    QUESTION_NOT_IN_EXAM(HttpStatus.BAD_REQUEST, "QUESTION_NOT_IN_EXAM", "해당 문항이 시험에 속해있지 않습니다.");
+    QUESTION_NOT_IN_EXAM(HttpStatus.BAD_REQUEST, "QUESTION_NOT_IN_EXAM", "해당 문항이 시험에 속해있지 않습니다."),
+
+    // 시험 - 수정/삭제
+    EXAM_HAS_SESSIONS(HttpStatus.CONFLICT, "EXAM_HAS_SESSIONS", "이미 응시자가 존재하는 시험은 수정/삭제할 수 없습니다.");
 
     private final HttpStatus status;
     private final String code;
