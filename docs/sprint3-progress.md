@@ -17,7 +17,7 @@
 | PR-1 인프라 (V4 + 엔티티/Repo/Broadcaster) | ✅ 완료 (2026-05-15) | — |
 | PR-2 백로그 13 (즉시 이벤트 수집) | ✅ 완료 (2026-05-15) | 백로그 12 백엔드 부수 완료 |
 | PR-3 백로그 14 (배치 이벤트 + 스냅샷 + SUSPICIOUS) | ✅ 완료 (2026-05-15) | — |
-| PR-4 백로그 15 (답안 재생) | ⏳ | — |
+| PR-4 백로그 15 (답안 재생) | ✅ 완료 (2026-05-15) | — |
 | PR-5 백로그 16 (감독관 메타/카드 목록) | ⏳ | 16/17/18 백엔드 담당 |
 | PR-6 백로그 17 (주목도 정렬 + 학생 상세) | ⏳ | 16/17/18 백엔드 담당 |
 | PR-7 백로그 18 (SSE stream + 이벤트 피드) | ⏳ | 16/17/18 백엔드 담당 |
@@ -155,3 +155,38 @@ PR-2의 `VISIBILITY_LOST`/`VISIBILITY_RESTORED` 이벤트 영구 저장 + `durat
 
 #### 커밋
 - `65fd147 feat(backend): Sprint 3 백로그 14 — 배치 이벤트 + 답안 스냅샷 + SUSPICIOUS 파생` (test-integration)
+
+---
+
+### 2026-05-15 — PR-4 백로그 15 (답안 재생)
+
+#### 추가된 엔드포인트
+
+| Method | Path | 인증 | 응답 | 백로그 |
+|---|---|---|---|---|
+| GET | `/api/v1/exams/{examId}/sessions/{sessionId}/replay` | 교수 JWT | 200 + `ReplayResponse` | 15 |
+
+#### 변경 파일
+
+| 위치 | 변경 |
+|---|---|
+| `backend/.../domain/replay/dto/ReplayResponse.java` | 신규. `sessionId`, `studentNumber`/`Name`, `examTitle`, `startedAt`, `submittedAt`, `questions[QuestionMeta]`, `timeline[TimelineItem]`, `snapshots[SnapshotItem]`. `@JsonInclude(NON_NULL)` |
+| `backend/.../domain/replay/service/ReplayService.java` | 신규. `@Transactional(readOnly=true) getReplay(professorId, examId, sessionId)`. 권한·SUBMITTED 검증 후 questions/timeline/snapshots 빌드. `relativeMs` 헬퍼로 `startedAt` 기준 상대 ms 계산 (음수는 0으로 클램프) |
+| `backend/.../domain/replay/controller/ReplayController.java` | 신규. `GET /api/v1/exams/{examId}/sessions/{sessionId}/replay`. `@AuthenticationPrincipal Long professorId` |
+| `backend/.../domain/event/repository/EventLogRepository.java` | `findAllByExamSessionIdOrderByOccurredAtAsc` → `findAllByExamSessionIdOrderByOccurredAtAscIdAsc`로 변경 (동일 `occurredAt` 이벤트 간 순서 안정성: SUSPICIOUS가 원본 CHOICE_CHANGE보다 뒤에 오도록 id ASC 보조 정렬) |
+
+#### 처리 흐름
+1. `examRepository.findById` → 없으면 `EXAM_NOT_FOUND`
+2. `exam.professor.id != professorId` → `FORBIDDEN`
+3. `examSessionRepository.findById` → 없으면 `SESSION_NOT_FOUND`. `session.exam.id != examId`인 경우도 `SESSION_NOT_FOUND`
+4. `!session.isSubmitted()` → `SESSION_NOT_SUBMITTED`
+5. questions: `exam.getQuestions()` → `displayOrder` ASC 정렬
+6. timeline: `findAllByExamSessionIdOrderByOccurredAtAscIdAsc(sessionId)` → 각 row에 대해 `t = max(0, occurredAt - startedAt 의 ms)`
+7. snapshots: `findAllByExamSessionIdOrderByCapturedAtAsc(sessionId)` → 동일 방식으로 `t` 계산. `Long[]` → `List<Long>` 변환
+8. `ReplayResponse` 빌드 후 반환
+
+#### 빌드 검증
+- `./gradlew compileJava` → `BUILD SUCCESSFUL` (JDK 24 임시 toolchain)
+
+#### 커밋
+- 본 진행 기록과 함께 푸시 예정

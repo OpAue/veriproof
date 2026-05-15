@@ -13,8 +13,11 @@ import java.util.List;
 @Repository
 public interface EventLogRepository extends JpaRepository<EventLog, Long> {
 
-    /** 사후 재생(백로그 15)용. 한 세션의 모든 이벤트를 시간순으로. */
-    List<EventLog> findAllByExamSessionIdOrderByOccurredAtAsc(Long examSessionId);
+    /**
+     * 사후 재생(백로그 15)용. 한 세션의 모든 이벤트를 시간순으로.
+     * 동일 occurredAt 이벤트(CHOICE_CHANGE + 파생 SUSPICIOUS_CHOICE_CHANGE 등) 간 순서 안정성을 위해 id ASC 보조 정렬.
+     */
+    List<EventLog> findAllByExamSessionIdOrderByOccurredAtAscIdAsc(Long examSessionId);
 
     /** 감독관 이벤트 피드(백로그 18) 초기 적재 / 폴백 GET. 시간 역순. */
     List<EventLog> findAllByExamIdAndOccurredAtAfterOrderByOccurredAtDesc(
