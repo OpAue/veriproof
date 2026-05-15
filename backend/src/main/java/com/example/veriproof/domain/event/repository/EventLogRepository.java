@@ -49,4 +49,20 @@ public interface EventLogRepository extends JpaRepository<EventLog, Long> {
                AND e.durationMs IS NOT NULL
             """)
     Double avgVisibilityDurationMs(@Param("sessionId") Long sessionId);
+
+    /**
+     * SUSPICIOUS_CHOICE_CHANGE 파생용 (백로그 14).
+     * 같은 세션의 VISIBILITY_RESTORED 또는 FULLSCREEN_ENTER 중 도착 시각 이전의 가장 최근 1건.
+     * Pageable로 limit 1을 전달.
+     */
+    @Query("""
+            SELECT e FROM EventLog e
+             WHERE e.examSession.id = :sessionId
+               AND e.eventType IN ('VISIBILITY_RESTORED', 'FULLSCREEN_ENTER')
+               AND e.occurredAt < :before
+             ORDER BY e.occurredAt DESC
+            """)
+    List<EventLog> findLatestReturnBefore(@Param("sessionId") Long sessionId,
+                                          @Param("before") OffsetDateTime before,
+                                          Pageable pageable);
 }

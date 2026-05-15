@@ -1,5 +1,6 @@
 package com.example.veriproof.domain.event.controller;
 
+import com.example.veriproof.domain.event.dto.EventBatchRequest;
 import com.example.veriproof.domain.event.dto.EventRequest;
 import com.example.veriproof.domain.event.service.EventIngestService;
 import com.example.veriproof.global.common.ApiResponse;
@@ -33,6 +34,18 @@ public class StudentEventController {
             @RequestBody @Valid EventRequest request) {
 
         eventIngestService.ingest(sessionUuid, request);
+        return ResponseEntity.noContent().build();
+    }
+
+    @Operation(summary = "배치 이벤트 + 답안 스냅샷 전송",
+            description = "KEYSTROKE / CHOICE_CHANGE / QUESTION_NAVIGATE + answer_snapshot 일괄 저장. " +
+                    "CHOICE_CHANGE 도착 시 직전 5초 내 RESTORED/ENTER 있으면 SUSPICIOUS_CHOICE_CHANGE 파생. (백로그 14)")
+    @PostMapping("/batch")
+    public ResponseEntity<ApiResponse<Void>> ingestBatch(
+            @CurrentSession UUID sessionUuid,
+            @RequestBody @Valid EventBatchRequest request) {
+
+        eventIngestService.ingestBatch(sessionUuid, request);
         return ResponseEntity.noContent().build();
     }
 }
