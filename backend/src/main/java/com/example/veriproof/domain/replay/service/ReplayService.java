@@ -12,6 +12,9 @@ import com.example.veriproof.domain.exam.repository.ExamSessionRepository;
 import com.example.veriproof.domain.replay.dto.ReplayResponse;
 import com.example.veriproof.global.exception.CustomException;
 import com.example.veriproof.global.exception.ErrorCode;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,6 +24,7 @@ import java.time.OffsetDateTime;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 종료된 시험 세션의 답안 재생 데이터 빌더 (백로그 15).
@@ -30,10 +34,13 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ReplayService {
 
+    private static final TypeReference<Map<String, Object>> PAYLOAD_TYPE = new TypeReference<>() {};
+
     private final ExamRepository examRepository;
     private final ExamSessionRepository examSessionRepository;
     private final EventLogRepository eventLogRepository;
     private final AnswerSnapshotRepository answerSnapshotRepository;
+    private final ObjectMapper objectMapper;
 
     @Transactional(readOnly = true)
     public ReplayResponse getReplay(Long professorId, Long examId, Long sessionId) {
@@ -71,7 +78,7 @@ public class ReplayService {
                         e.getEventType(),
                         e.getQuestion() != null ? e.getQuestion().getId() : null,
                         e.getDurationMs(),
-                        e.getPayload()))
+                        parsePayload(e.getPayload())))
                 .toList();
 
         List<ReplayResponse.SnapshotItem> snapshots = answerSnapshotRepository
@@ -103,5 +110,15 @@ public class ReplayService {
 
     private List<Long> toList(Long[] arr) {
         return (arr == null || arr.length == 0) ? null : Arrays.asList(arr);
+    }
+
+    /** event_log.payload(JSONB → String)를 Map으로 파싱. 손상 시 빈 Map. */
+    private Map<String, Object> parsePayload(String json) {
+        if (json == null || json.isBlank()) return Map.of();
+        try {
+            return objectMapper.readValue(json, PAYLOAD_TYPE);
+        } catch (JsonProcessingException e) {
+            return Map.of();
+        }
     }
 }

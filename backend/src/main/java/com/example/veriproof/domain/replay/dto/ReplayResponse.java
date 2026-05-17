@@ -38,7 +38,7 @@ public record ReplayResponse(
             String type,
             Long questionId,
             Integer durationMs,
-            String payload   // raw JSON 문자열
+            Object payload   // 파싱된 JSON 객체 (프론트가 e.payload.key 등으로 직접 접근)
     ) {}
 
     @JsonInclude(JsonInclude.Include.NON_NULL)
